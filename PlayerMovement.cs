@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum PlayerState /* /!\ the enum HAS to be PUBLIC /!\ */
+public enum PlayerState 
 {
     IDLE,
     RUN,
@@ -16,15 +16,18 @@ public class PlayerMovement : MonoBehaviour
     private Animator animator;
     
     [SerializeField] private float _runSpeed =10f;
+    [SerializeField] private float _sprintMultplier = 1.5f;
+    [SerializeField] private float _rollMultplier = 1.5f;
     [SerializeField] private float _rollForce = 10f;
     [SerializeField] private float _rollDuration = 1;
     
     private bool _isRolling = false;
     private float _rolltimer = 0f;
     private bool _isSprinting = false;
+    private bool _isMoving = false;
     private Vector2 _rollDirection;
 
-    private PlayerState _currentState;
+    public PlayerState _currentState;
     private Vector2 _direction;
 
     private void Awake()
@@ -42,23 +45,19 @@ public class PlayerMovement : MonoBehaviour
         StateUpdate();
         _direction.x = Input.GetAxisRaw("Horizontal");
         _direction.y = Input.GetAxisRaw("Vertical");
-        animator.SetFloat("MoveSpeedX", _direction.normalized.x);
-        animator.SetFloat("MoveSpeedY", _direction.normalized.y);
-
-        Debug.Log("roll direction: " + _rollDirection);
-        Debug.Log("Current State: "+_currentState);
-        if (Input.GetButton("Fire3"))
+        if (_currentState != PlayerState.ROLL)
+            {
+            animator.SetFloat("MoveSpeedX", _direction.normalized.x);
+            animator.SetFloat("MoveSpeedY", _direction.normalized.y);
+            }
+        if (Mathf.Abs(_direction.x) > 0.1f || Mathf.Abs(_direction.y) > 0.1f)
         {
-            Debug.Log("Shitf");
+            _isMoving = true;
         }
     }
     private void FixedUpdate()
     {
-        StateFixedUpdate();
-        if (_currentState != PlayerState.ROLL) 
-        { 
-            rb.velocity = _direction.normalized * _runSpeed * Time.deltaTime; 
-        }
+        StateFixedUpdate();    
     }
     void EnterState()
     {
@@ -66,6 +65,7 @@ public class PlayerMovement : MonoBehaviour
         {
             case PlayerState.IDLE:
                 break;
+
             case PlayerState.RUN:
                 break;
 
@@ -75,6 +75,9 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case PlayerState.ROLL:
+                _rolltimer = _rollDuration;
+                _rollDirection = _direction;
+                _isRolling = true;
                 animator.SetBool("IsRolling", true);
                 break;
 
@@ -90,7 +93,7 @@ public class PlayerMovement : MonoBehaviour
             case PlayerState.IDLE:
                 PlayerRollInput();
                 PlayerSprintInput();
-                if (Mathf.Abs(_direction.x) > 0.1f || Mathf.Abs(_direction.y) > 0.1f)
+                if (_isMoving)
                 {
                     TransitionToState(PlayerState.RUN);
                 }
@@ -99,12 +102,12 @@ public class PlayerMovement : MonoBehaviour
             case PlayerState.RUN:
                 PlayerRollInput();
                 PlayerSprintInput();
-                if (Mathf.Abs(_direction.x) < 0.01f && Mathf.Abs(_direction.y) < 0.01f)
+                if (!_isMoving)
                 {
                     TransitionToState(PlayerState.IDLE);
                 }
                 break;
-
+                
             case PlayerState.SPRINT:
                 PlayerRollInput();
                 PlayerSprintInput();
@@ -112,6 +115,8 @@ public class PlayerMovement : MonoBehaviour
 
             case PlayerState.ROLL:
                 _rolltimer -= Time.deltaTime;
+                    animator.SetFloat("MoveSpeedX", _rollDirection.normalized.x);
+                    animator.SetFloat("MoveSpeedY", _rollDirection.normalized.y);
                 if (_rolltimer<0)
                 {
                     TransitionToState(PlayerState.IDLE);
@@ -127,15 +132,16 @@ public class PlayerMovement : MonoBehaviour
         switch (_currentState)
         {
             case PlayerState.IDLE:
+                rb.velocity = _direction.normalized * _runSpeed * Time.deltaTime;
                 break;
             case PlayerState.RUN:
-
+                rb.velocity = _direction.normalized * _runSpeed * Time.deltaTime;
                 break;
             case PlayerState.SPRINT:
+                rb.velocity = _direction.normalized * _runSpeed * _sprintMultplier* Time.deltaTime;
                 break;
             case PlayerState.ROLL:
-                rb.velocity = _rollDirection.normalized * _rollForce * Time.deltaTime;
-
+                rb.velocity = _rollDirection.normalized * _rollForce * _rollMultplier * Time.deltaTime;
                 break;
             default:
                 break;
@@ -148,7 +154,7 @@ public class PlayerMovement : MonoBehaviour
             case PlayerState.IDLE:
                 break;
             case PlayerState.RUN:
-
+                
                 break;
             case PlayerState.SPRINT:
                 _isSprinting = false;
@@ -173,24 +179,23 @@ public class PlayerMovement : MonoBehaviour
 
     void PlayerRollInput()
     {
-        if (Input.GetButtonDown("Jump") && !_isRolling)
+        if ((Input.GetButtonDown("Jump") && !_isRolling) || _isSprinting && Input.GetButtonDown("Jump") && !_isRolling)
         {
-            _rolltimer = _rollDuration;
-            _rollDirection = _direction;
-            _isRolling = true;
             TransitionToState(PlayerState.ROLL);
         }
     }
     void PlayerSprintInput()
-    {       
-
+    {
+        if (!_isRolling && _isMoving)
+        {
             if (Input.GetButton("Fire3"))
             {
                 TransitionToState(PlayerState.SPRINT);
+
             }
+        }  
         if (Input.GetButtonUp("Fire3"))
         {
-            Debug.Log(">> shift button up : transition to Idle ");
             TransitionToState(PlayerState.IDLE);
         }       
     }
