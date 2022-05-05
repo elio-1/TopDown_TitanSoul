@@ -31,8 +31,9 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Stamina")]
     [SerializeField] private float maxStamina =100;
+    [SerializeField] private float _staminaRegen = 15 ;
+    [SerializeField] private float _idleStaminaRegen = 30;
     [HideInInspector] public float currentStamina;
-    [SerializeField] private float _staminaRegenPerSec = 5 ;
 
 
     #region Private & Protected
@@ -266,7 +267,14 @@ public class PlayerMovement : MonoBehaviour
         {
             if (currentStamina >= 0 && currentStamina <= 100)
             {
-                currentStamina += _staminaRegenPerSec * Time.deltaTime;
+                if (_currentState == PlayerState.IDLE)
+                {
+                    currentStamina += _idleStaminaRegen * Time.deltaTime;
+                }
+                else
+                {
+                currentStamina += _staminaRegen * Time.deltaTime;
+                }
             }
             if (currentStamina >= 100)
             {
