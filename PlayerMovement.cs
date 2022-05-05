@@ -20,6 +20,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float _runSpeed =10f;
     [SerializeField] private float _sprintMultplier = 1.5f;
     [SerializeField] private float _sprintStaminaCost = 1;
+    [SerializeField] private float _minStaminaRequiredToSprintAgain = 15;
 
     [Header("Roll")]
     [SerializeField] private float _rollMultplier = 1.5f;
@@ -55,7 +56,7 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Update()
     {
-        Debug.Log(_isSprinting);
+        Debug.Log("isSprinting bool: " +_isSprinting);
         
         StateUpdate();
         
@@ -77,6 +78,7 @@ public class PlayerMovement : MonoBehaviour
         switch (_currentState)
         {
             case PlayerState.IDLE:
+                _isSprinting = false;
                 break;
 
             case PlayerState.RUN:
@@ -120,7 +122,6 @@ public class PlayerMovement : MonoBehaviour
         switch (_currentState)
         {
             case PlayerState.IDLE:
-                _isSprinting = false;
                 PlayerRollInput();
                 PlayerSprintInput();
                 SetDirection();
@@ -200,6 +201,7 @@ public class PlayerMovement : MonoBehaviour
             case PlayerState.SPRINT:
                 _isSprinting = false;
                 animator.SetBool("isSprinting", false);
+                Debug.Log("SPrint ExitState");
                 break;
             case PlayerState.ROLL:
                 rb.velocity = Vector2.zero;
@@ -229,16 +231,16 @@ public class PlayerMovement : MonoBehaviour
         }
     }
     void PlayerSprintInput()
-    {
-        bool canSprint = currentStamina >= 1;
-        if (!_isRolling && _isMoving && currentStamina > 5 && canSprint)
+    { 
+        if (!_isRolling && _isMoving && currentStamina >= _minStaminaRequiredToSprintAgain)
         {
-            if (Input.GetButton("Fire3") && currentStamina > 1)
+            if (Input.GetButton("Fire3"))
             {
                 TransitionToState(PlayerState.SPRINT);
+                
             }
         }  
-        if (Input.GetButtonUp("Fire3") || !canSprint)
+        if (Input.GetButtonUp("Fire3") || currentStamina <= 0.5f)
         {
             TransitionToState(PlayerState.IDLE);
         }
@@ -269,7 +271,6 @@ public class PlayerMovement : MonoBehaviour
         {
             if (currentStamina >= 0 && currentStamina <= 100)
             {
-
                 currentStamina += _staminaRegenPerSec * Time.deltaTime;
             }
             if (currentStamina >= 100)
