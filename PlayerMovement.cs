@@ -14,23 +14,35 @@ public class PlayerMovement : MonoBehaviour
 {
     private Rigidbody2D rb;
     private Animator animator;
+    [HideInInspector] public PlayerState _currentState;
     
+    [Header("Run and Sprint")]
     [SerializeField] private float _runSpeed =10f;
     [SerializeField] private float _sprintMultplier = 1.5f;
+    [SerializeField] private float _sprintStaminaCost = 1;
+
+    [Header("Roll")]
     [SerializeField] private float _rollMultplier = 1.5f;
     [SerializeField] private float _rollForce = 10f;
     [SerializeField] private float _rollDuration = 1;
-    
+    [SerializeField] private float _rollStaminaCost = 20;
+    [SerializeField] AnimationCurve _rollCurve;
+
+    [Header("Stamina")]
+    [SerializeField] private float maxStamina =100;
+    [HideInInspector] public float currentStamina;
+    [SerializeField] private float _staminaRegenPerSec = 5 ;
+
+
+    #region Private & Protected
     private bool _isRolling = false;
     private float _rolltimer = 0f;
     private bool _isSprinting = false;
     private bool _isMoving = false;
     private Vector2 _rollDirection;
     private Vector2 _facingDirection = new Vector2();
-
-    public PlayerState _currentState;
     private Vector2 _direction;
-
+    #endregion
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -38,10 +50,12 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Start()
     {
+        currentStamina = maxStamina;
         TransitionToState(PlayerState.IDLE);
     }
     private void Update()
     {
+        Debug.Log(_isSprinting);
         
         StateUpdate();
         
@@ -69,15 +83,16 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case PlayerState.SPRINT:
-                _isSprinting = true;
                 if (_isMoving)
                 {
+                _isSprinting = true;
                     animator.SetBool("isSprinting", true);
                 }
                
                     break;
 
             case PlayerState.ROLL:
+                currentStamina -= _rollStaminaCost;
                 _rolltimer = _rollDuration;
                 if (_direction.magnitude > 0)
                 {
@@ -100,10 +115,12 @@ public class PlayerMovement : MonoBehaviour
     }
     void StateUpdate()
     {
-        
+        StaminaRegen(!_isRolling && !_isSprinting);
+
         switch (_currentState)
         {
             case PlayerState.IDLE:
+                _isSprinting = false;
                 PlayerRollInput();
                 PlayerSprintInput();
                 SetDirection();
@@ -130,6 +147,11 @@ public class PlayerMovement : MonoBehaviour
                 if(!_isMoving)
                 {
                     animator.SetBool("isSprinting", false);
+                }
+                else
+                {
+                    _isSprinting = true;
+                    currentStamina -= _sprintStaminaCost * Time.deltaTime;
                 }
                 break;
 
@@ -160,7 +182,7 @@ public class PlayerMovement : MonoBehaviour
                 rb.velocity = _direction.normalized * _runSpeed * _sprintMultplier* Time.deltaTime;
                 break;
             case PlayerState.ROLL:
-                rb.velocity = _rollDirection.normalized * _rollForce * _rollMultplier * Time.deltaTime;
+                rb.velocity = _rollDirection.normalized * _rollForce * _rollMultplier * Time.deltaTime*_rollCurve.Evaluate(_rolltimer/_rollDuration);
                 break;
             default:
                 break;
@@ -198,25 +220,30 @@ public class PlayerMovement : MonoBehaviour
 
     void PlayerRollInput()
     {
-        if ((Input.GetButtonDown("Jump") && !_isRolling) || _isSprinting && Input.GetButtonDown("Jump") && !_isRolling)
+        if (currentStamina > _rollStaminaCost)
         {
-            TransitionToState(PlayerState.ROLL);
+            if ((Input.GetButtonDown("Jump") && !_isRolling) || _isSprinting && Input.GetButtonDown("Jump") && !_isRolling)
+            {
+                TransitionToState(PlayerState.ROLL);
+            }
         }
     }
     void PlayerSprintInput()
     {
-        if (!_isRolling && _isMoving)
+        bool canSprint = currentStamina >= 1;
+        if (!_isRolling && _isMoving && currentStamina > 5 && canSprint)
         {
-            if (Input.GetButton("Fire3"))
+            if (Input.GetButton("Fire3") && currentStamina > 1)
             {
                 TransitionToState(PlayerState.SPRINT);
-
             }
         }  
-        if (Input.GetButtonUp("Fire3"))
+        if (Input.GetButtonUp("Fire3") || !canSprint)
         {
             TransitionToState(PlayerState.IDLE);
-        }       
+        }
+
+
     }
 
     void SetDirection()
@@ -235,4 +262,25 @@ public class PlayerMovement : MonoBehaviour
             animator.SetFloat("MoveSpeedY", _facingDirection.y*.15f);
         }
     }
+
+    void StaminaRegen( bool IsPossible)
+    {
+        if (IsPossible)
+        {
+            if (currentStamina >= 0 && currentStamina <= 100)
+            {
+
+                currentStamina += _staminaRegenPerSec * Time.deltaTime;
+            }
+            if (currentStamina >= 100)
+            {
+                currentStamina = 100;
+            }
+            if (currentStamina <= 0)
+            {
+                currentStamina = 0;
+            }
+        }
+    }
+    
 }
