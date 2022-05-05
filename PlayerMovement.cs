@@ -26,6 +26,7 @@ public class PlayerMovement : MonoBehaviour
     private bool _isSprinting = false;
     private bool _isMoving = false;
     private Vector2 _rollDirection;
+    private Vector2 _facingDirection = new Vector2();
 
     public PlayerState _currentState;
     private Vector2 _direction;
@@ -43,16 +44,14 @@ public class PlayerMovement : MonoBehaviour
     {
         
         StateUpdate();
-        _direction.x = Input.GetAxisRaw("Horizontal");
-        _direction.y = Input.GetAxisRaw("Vertical");
-        if (_currentState != PlayerState.ROLL)
-            {
-            animator.SetFloat("MoveSpeedX", _direction.normalized.x);
-            animator.SetFloat("MoveSpeedY", _direction.normalized.y);
-            }
+        
         if (Mathf.Abs(_direction.x) > 0.1f || Mathf.Abs(_direction.y) > 0.1f)
         {
             _isMoving = true;
+        }
+        else
+        {
+            _isMoving = false;
         }
     }
     private void FixedUpdate()
@@ -71,14 +70,28 @@ public class PlayerMovement : MonoBehaviour
 
             case PlayerState.SPRINT:
                 _isSprinting = true;
-                animator.SetBool("isSprinting", true);
-                break;
+                if (_isMoving)
+                {
+                    animator.SetBool("isSprinting", true);
+                }
+               
+                    break;
 
             case PlayerState.ROLL:
                 _rolltimer = _rollDuration;
+                if (_direction.magnitude > 0)
+                {
                 _rollDirection = _direction;
+                }
+                else
+                {
+                    _rollDirection = _facingDirection;
+
+                }
                 _isRolling = true;
                 animator.SetBool("IsRolling", true);
+                animator.SetFloat("MoveSpeedX", _rollDirection.normalized.x);
+                animator.SetFloat("MoveSpeedY", _rollDirection.normalized.y);
                 break;
 
             default:
@@ -93,6 +106,7 @@ public class PlayerMovement : MonoBehaviour
             case PlayerState.IDLE:
                 PlayerRollInput();
                 PlayerSprintInput();
+                SetDirection();
                 if (_isMoving)
                 {
                     TransitionToState(PlayerState.RUN);
@@ -101,6 +115,7 @@ public class PlayerMovement : MonoBehaviour
 
             case PlayerState.RUN:
                 PlayerRollInput();
+                SetDirection();
                 PlayerSprintInput();
                 if (!_isMoving)
                 {
@@ -109,14 +124,18 @@ public class PlayerMovement : MonoBehaviour
                 break;
                 
             case PlayerState.SPRINT:
+                SetDirection();
                 PlayerRollInput();
                 PlayerSprintInput();
+                if(!_isMoving)
+                {
+                    animator.SetBool("isSprinting", false);
+                }
                 break;
 
             case PlayerState.ROLL:
                 _rolltimer -= Time.deltaTime;
-                    animator.SetFloat("MoveSpeedX", _rollDirection.normalized.x);
-                    animator.SetFloat("MoveSpeedY", _rollDirection.normalized.y);
+                    
                 if (_rolltimer<0)
                 {
                     TransitionToState(PlayerState.IDLE);
@@ -198,5 +217,22 @@ public class PlayerMovement : MonoBehaviour
         {
             TransitionToState(PlayerState.IDLE);
         }       
+    }
+
+    void SetDirection()
+    {
+        _direction.x = Input.GetAxisRaw("Horizontal");
+        _direction.y = Input.GetAxisRaw("Vertical");
+        if (_direction.magnitude > 0)
+        {
+            _facingDirection = _direction;
+            animator.SetFloat("MoveSpeedX", _direction.x);
+            animator.SetFloat("MoveSpeedY", _direction.y);
+        }
+        else
+        {
+            animator.SetFloat("MoveSpeedX", _facingDirection.x*.15f);
+            animator.SetFloat("MoveSpeedY", _facingDirection.y*.15f);
+        }
     }
 }
