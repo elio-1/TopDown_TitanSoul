@@ -56,8 +56,6 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Update()
     {
-        Debug.Log("isSprinting bool: " +_isSprinting);
-        
         StateUpdate();
         
         if (Mathf.Abs(_direction.x) > 0.1f || Mathf.Abs(_direction.y) > 0.1f)
@@ -78,7 +76,6 @@ public class PlayerMovement : MonoBehaviour
         switch (_currentState)
         {
             case PlayerState.IDLE:
-                _isSprinting = false;
                 break;
 
             case PlayerState.RUN:
@@ -87,7 +84,6 @@ public class PlayerMovement : MonoBehaviour
             case PlayerState.SPRINT:
                 if (_isMoving)
                 {
-                _isSprinting = true;
                     animator.SetBool("isSprinting", true);
                 }
                
@@ -115,6 +111,7 @@ public class PlayerMovement : MonoBehaviour
                 break;
         }
     }
+
     void StateUpdate()
     {
         StaminaRegen(!_isRolling && !_isSprinting);
@@ -151,7 +148,6 @@ public class PlayerMovement : MonoBehaviour
                 }
                 else
                 {
-                    _isSprinting = true;
                     currentStamina -= _sprintStaminaCost * Time.deltaTime;
                 }
                 break;
@@ -201,7 +197,6 @@ public class PlayerMovement : MonoBehaviour
             case PlayerState.SPRINT:
                 _isSprinting = false;
                 animator.SetBool("isSprinting", false);
-                Debug.Log("SPrint ExitState");
                 break;
             case PlayerState.ROLL:
                 rb.velocity = Vector2.zero;
@@ -212,7 +207,7 @@ public class PlayerMovement : MonoBehaviour
             default:
                 break;
         }
-    }  
+    }
     public void TransitionToState(PlayerState newState)
     {
         ExitState();
@@ -224,7 +219,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (currentStamina > _rollStaminaCost)
         {
-            if ((Input.GetButtonDown("Jump") && !_isRolling) || _isSprinting && Input.GetButtonDown("Jump") && !_isRolling)
+            if ((Input.GetButtonDown("Jump") && !_isRolling))
             {
                 TransitionToState(PlayerState.ROLL);
             }
