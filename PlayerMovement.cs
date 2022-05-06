@@ -30,7 +30,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] AnimationCurve _rollCurve;
 
     [Header("Stamina")]
-    [SerializeField] private float maxStamina =100;
+    public float maxStamina =100;
     [SerializeField] private float _staminaRegen = 15 ;
     [SerializeField] private float _idleStaminaRegen = 30;
     [HideInInspector] public float currentStamina;
@@ -52,6 +52,7 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Start()
     {
+        _direction = new Vector2(0, -1);
         currentStamina = maxStamina;
         TransitionToState(PlayerState.IDLE);
     }

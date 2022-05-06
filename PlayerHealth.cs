@@ -7,7 +7,6 @@ public class PlayerHealth : MonoBehaviour
     private Animator animator;
     private PlayerMovement _playerMoveScript;
     public float _maxHealth = 100f;
-    
     [HideInInspector] public float _currentHealth;
     [HideInInspector] public bool _isInvulnerable = false;
     
